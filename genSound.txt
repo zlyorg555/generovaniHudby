@@ -1,0 +1,147 @@
+In[2968]:= genSound[ music_]:=(
+soundNoteList[list_]:= Apply[SoundNote, list];
+generated = Map[soundNoteList, music];
+sound = Sound[generated];
+Return[sound];
+)
+In[2969]:= ApplyAndJoin[fn_, count_]:=(
+Flatten[Map[fn, Range[count]]]
+)
+In[2970]:= 
+
+(* Přečtěte si dokumentaci na https://reference.wolfram.com/language/ref/SoundNote.html *)
+In[2971]:= music = {{{0,-10}, "Piano"}}
+genSound[music]
+In[2973]:= 
+In[2974]:= 
+genSound[{{{0,4}, "Harpsichord"}}]
+
+In[2975]:= 
+In[2976]:= genSound[{{2, "Harpsichord"}}]
+
+
+
+
+In[2977]:= Sound
+
+
+[{SoundNote[{0,4},{0,2},"Hapsichord"]}]
+In[2978]:= 
+In[2979]:= 
+In[2980]:= 
+In[2981]:= genSound[{{2, "Harpsichord"}}]
+
+
+
+In[2982]:= 
+In[2983]:= music = {{{0,4}, {0,0.5}, "Harpsichord"},{2, {0.5,1.5}, "Piano"}, {-1, 2, "Flute" }, {0,1,"Flute"}}
+genSound[music]
+Out[2984]= 
+Out[2983]= {{{0,4},{0,0.5},Harpsichord},{2,{0.5,1.5},Piano},{-1,2,Flute},{0,1,Flute}}
+Out[2938]= 
+Out[2937]= {{{0,4},{0,0.5},Harpsichord},{2,{0.5,1.5},Piano},{-1,2,Flute},{0,1,Flute}}
+Out[2892]= 
+Out[2891]= {{{0,4},{0,0.5},Harpsichord},{2,{0.5,1.5},Piano},{-1,2,Flute},{0,1,Flute}}
+
+In[2985]:= music = {{{0,4}, "Harpsichord"}}
+genSound[music]
+In[2987]:= NormalDistribution[0,1]
+RandomVariate[NormalDistribution[0.5, 0.5]]
+ChooseTone[previous_,weights_,toneWeights_, toneImportance_]:=(
+allTones=Range[-Length[weights],Length[weights]]+previous;
+allIntervalWeights=Join[Reverse[Drop[weights,-1]],weights];
+allToneWeights=Map[Function[t,Part[toneWeights,t % Length[toneWeights]]],allTones];
+tone = RandomSample[(allToneWeights * allIntervalWeights) ^ toneImportance -> allTones)
+)
+In[3033]:= GetMelody[size_, weights_, toneWeights_] := (
+melody = {0};
+For[i=1, i<size,i++, (
+previous = Part[melody, i];
+interval = RandomSample[weights->{0, 1, 2,3, 4, 5, 6, 7, 8}, 1];
+interval = If[RandomReal[]>0.5, interval, -interval];
+next = interval+ previous;
+AppendTo[melody, next];
+)];
+Return[melody];
+)
+
+
+In[2990]:= CreateMusic[melody_, tones_, rythm_] := (
+music = {};
+For[i=0, i<Length[melody],i++, (
+toneOffset = Part[melody, i+1];
+tone = Part[tones, 1 + Mod[toneOffset, Length[tones]]] + (Floor[toneOffset / Length[tones]] * 12);
+sound = {tone, Part[rythm, i + 1] * 1.5, "Piano"};
+AppendTo[music,sound];
+)];
+Return[music];
+)
+In[2991]:= GetTact[divCoef_, recursionCoef_] := (
+If[RandomReal[] > divCoef,(
+Return[{1}]
+),(
+divLen[e_] := e / 2;
+Return[ Map[divLen, Join[GetTact[divCoef / recursionCoef, recursionCoef], GetTact[divCoef/recursionCoef, recursionCoef]]]];
+)]
+)
+In[2992]:= 
+GetRythm[divCoef_, recursionCoef_, size_] := 
+ApplyAndJoin[Function[i, GetTact[divCoef, recursionCoef]], size]
+
+In[3024]:= rtm1 = GetRythm[2.3, 3,  1];
+rtm2 = GetRythm[2.3, 3,  1];
+tones = {0, 2, 3, 5, 7, 8, 10} + 0;
+weights = {1, 3, 5, 4, 4, 0.7,0.7, 1.2, 1};
+mainM = GetMelody[Length[rtm]];
+melody1 = Join[GetMelody[Length[rtm1], weights], ReplacePart[mainM, Length[rtm2]-> 4], GetMelody[Length[rtm1], weights], ReplacePart[mainM, Length[rtm2]->0]]
+mainM = GetMelody[Length[rtm]];
+melody2 = Join[GetMelody[Length[rtm2], weights], ReplacePart[mainM, Length[rtm1]-> 4], GetMelody[Length[rtm2], weights], ReplacePart[mainM, Length[rtm1]->0]]
+
+genSound[CreateMusic[Join[melody1, melody2, melody1+3, melody2-4],tones,ApplyAndJoin[Function[i, Join[rtm1, rtm2, rtm1, rtm2, rtm2, rtm1, rtm2, rtm1]], 2]]]
+Out[3029]= {0,{-8},{-15},{-11},{-14},{-20},0,{4},{10},0,{4},{5},{9},{6},{8},0,{4},{10}}
+Out[3031]= {0,{-2},{0},{3},{6},{8},{10},0,{0},{1},0,{-2},{-6},{-5},{-4},{-7},{-5},0,{0},{1}}
+Out[3032]= 
+In[3002]:= 
+In[3003]:= ConstantArray[1/4, 8]
+In[3004]:= NumberForm[0.761154,100]
+In[3005]:= {1/2,{1/4,{1/4}}}
+Out[3005]= {1/2,{1/4,{1/4}}}
+Out[2958]= {1/2,{1/4,{1/4}}}
+Out[2912]= {1/2,{1/4,{1/4}}}
+Out[2675]= {1/2,{1/4,{1/4}}}
+Out[2567]= {1/2,{1/4,{1/4}}}
+Out[2529]= {1/2,{1/4,{1/4}}}
+Out[2491]= {1/2,{1/4,{1/4}}}
+Out[2450]= {1/2,{1/4,{1/4}}}
+Out[2409]= {1/2,{1/4,{1/4}}}
+Out[2368]= {1/2,{1/4,{1/4}}}
+Out[2330]= {1/2,{1/4,{1/4}}}
+Out[2250]= {1/2,{1/4,{1/4}}}
+Out[2210]= {1/2,{1/4,{1/4}}}
+Out[2172]= {1/2,{1/4,{1/4}}}
+Out[2136]= {1/2,{1/4,{1/4}}}
+Out[2101]= {1/2,{1/4,{1/4}}}
+Out[2066]= {1/2,{1/4,{1/4}}}
+
+
+
+Out[1926]= {1/2,{1/4,{1/4}}}
+Out[1873]= {1/2,{1/4,{1/4}}}
+Out[1870]= {1/4,{1/4},{1/2}}
+Out[1869]= {1/2,{1/4,{1/4}}}
+Out[1868]= {1/4,{1/4},{1/2}}
+Out[1859]= GetRythm[1,2]
+Out[1834]= GetRythm[1,2]
+
+In[3006]:= 
+In[3007]:= 
+In[3008]:= 
+In[3009]:= 
+In[3010]:= 
+In[3011]:= 
+In[3012]:= 
+Out[1519]= 6 
+
+In[3013]:= 
+
+In[3014]:= ApplyAndJoin[Function[i,{ RandomReal[], i}], 10]
