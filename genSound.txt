@@ -3,8 +3,7 @@ ApplyAndJoin[fn_, count_] := (Flatten[Map[fn, Range[count]]])
 (*Vyber naslednosti tonu*)
 
 ChooseTone[previous_, weights_, toneWeights_, toneImportance_, 
-  jumpBar_] := (
-  allTones = 
+  jumpBar_] := (allTones = 
    Range[-Length[weights] + 1 + previous, 
     Length[weights] - 1 + previous];
   allIntervalWeights = Join[Reverse[Drop[weights, 1]], weights];
@@ -17,11 +16,11 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
   If[RandomReal[] > 
     CDF[NormalDistribution[0, 0.1]][
      jumpBar - Abs[tone - previous]], (Goto[genNewTone])];
-  (*If[Abs[tone] > Abs[previous] & RandomReal[]<CDF[
-  NormalDistribution[0, 2]][Abs[tone]/Length[
-  toneWeights]]*2-1, (Print["Trying to go back"];Goto[genNewTone])];*)
-
-    Return[tone];)
+  If[(Abs[tone] > Abs[previous]) && (RandomReal[] < 
+      CDF[NormalDistribution[0, 3]][
+         Abs[tone]/Length[toneWeights]]*2 - 1), (
+    Goto[genNewTone])];
+  Return[tone];)
 (*Vytvareni dilku hudby*)
 
 GetMelody[rythm_, weights_, 
@@ -40,34 +39,29 @@ GetTact[divCoef_,
     Return[
      Map[divLen, 
       Join[GetTact[divCoef/recursionCoef, recursionCoef], 
-       GetTact[divCoef/recursionCoef, recursionCoef]]]];
-    )]
-  )
+       GetTact[divCoef/recursionCoef, recursionCoef]]]];)])
 
 GetRythm[divCoef_, recursionCoef_, size_] := 
  ApplyAndJoin[Function[i, GetTact[divCoef, recursionCoef]], size]
-(*
-GetPatterns[weights_,toneWeights_,size_,count_]:=(rythm=GetRythm[2.\
+(*GetPatterns[weights_,toneWeights_,size_,count_]:=(rythm=GetRythm[2.\
 3,2,size];
 Return[Map[Function[i,Transpose[{rythm,GetMelody[rythm,weights,\
-toneWeights]}]],rythm]];)
-*)
+toneWeights]}]],rythm]];)*)
 
 GetPatterns[weights_, toneWeights_, size_, 
   count_] := (rythm = GetRythm[2.1, 2, size];
   Return[Map[
     Function[i, 
      Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}]], 
-    Range[count]]];
-  )
+    Range[count]]];)
 
 (*Generace Hudby*)
 
 CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
   patterns = {};
   patternacces = ConstantArray[1, {params[[2]], params[[2]]}];
-  While[Length[patterns] < params[[2]], (
-    pattern = 
+  While[Length[patterns] < 
+    params[[2]], (pattern = 
      GetPatterns[weights, toneWeights, 
       RandomSample[params[[3]], 1][[1]], RandomInteger[{4, 12}]];
     If[Length[patterns] + Length[pattern] > params[[2]], 
@@ -75,43 +69,36 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
       Drop[pattern, params[[2]] - Length[patterns] - Length[pattern]]];
     patterns = Join[patterns, pattern];
     for[i = Length[patterns] - Length[pattern] + 1, 
-     i <= Length[patterns], i++, (
-      for[j = Length[patterns] - Length[pattern] + 1, 
-        j <= Length[patterns], j++, (
-         patternacces[[i]][[j]] = 10;
-         )];
-      )];
-    )];
+     i <= Length[patterns], 
+     i++, (for[j = Length[patterns] - Length[pattern] + 1, 
+        j <= Length[patterns], 
+        j++, (patternacces[[i]][[j]] = 10;)];)];)];
   pPos = 1;
   For[i = 0, i < params[[1]], 
-   i++, (For[j = 0, j < Length[patterns[[pPos]]], j++, (
-      toneOffset = patterns[[pPos, j + 1, 2]];
+   i++, (For[j = 0, j < Length[patterns[[pPos]]], 
+     j++, (toneOffset = patterns[[pPos, j + 1, 2]];
       tone = 
        Part[tones, 
          1 + Mod[toneOffset, Length[tones]]] + (Floor[
            toneOffset/Length[tones]]*12);
       sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Piano"};
-      AppendTo[music, sound];
-      )];
+      AppendTo[music, sound];)];
     pPos = 
      RandomSample[
        patternacces[[pPos]] -> Range[1, params[[2]]]][[1]];)];
-  Return[music];
-  )
+  Return[music];)
 
-GenSound[music_] := (
-  soundNoteList[list_] := Apply[SoundNote, list];
+GenSound[music_] := (soundNoteList[list_] := Apply[SoundNote, list];
   generated = Map[soundNoteList, music];
   sound = Sound[generated];
-  Return[sound];
-  )
+  Return[sound];)
 (*Nastaveni parametru*)
 
 tones = {0, 2, 3, 5, 7, 8, 10} + 0;
 weights = {1, 5, 5, 3, 3, 0.7, 0.7, 1.2, 1};
 toneWeights = {1.7, 1.5, 1.6, 1, 1.6, 1.5, 1};
 (*length patterns pLens*)
-params = {20, 10, {2, 3}};
+params = {20, 10, {10}};
 
 (*Spousteni*)
 
