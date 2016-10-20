@@ -20,13 +20,19 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
       CDF[NormalDistribution[0, 3]][
          Abs[tone]/Length[toneWeights]]*2 - 1), (
     Goto[genNewTone])];
+  (*introduce interval*)
+  
+  If[RandomReal[] < 
+    toneImportance - 
+     3, (tone = {tone, tone + 3*Sign[tone - previous]})]; 
   Return[tone];)
 (*Vytvareni dilku hudby*)
 
 GetMelody[rythm_, weights_, 
   toneWeights_] := (melody = {RandomSample[{0, 3, 5}][[1]]};
-  jumpBar = 4;
-  For[i = 1, i < Length[rythm], i++, (previous = melody[[i]];
+  jumpBar = 2;
+  For[i = 1, i < Length[rythm], 
+   i++, (previous = Flatten[{melody[[i]]}][[1]];
     next = 
      ChooseTone[previous, weights, toneWeights, rythm[[i]] + 1, 
       jumpBar];
@@ -49,7 +55,7 @@ Return[Map[Function[i,Transpose[{rythm,GetMelody[rythm,weights,\
 toneWeights]}]],rythm]];)*)
 
 GetPatterns[weights_, toneWeights_, size_, 
-  count_] := (rythm = GetRythm[2.1, 2, size];
+  count_] := (rythm = GetRythm[2.1, 2.0, size];
   Return[Map[
     Function[i, 
      Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}]], 
@@ -97,8 +103,15 @@ GenSound[music_] := (soundNoteList[list_] := Apply[SoundNote, list];
 tones = {0, 2, 3, 5, 7, 8, 10} + 0;
 weights = {1, 5, 5, 3, 3, 0.7, 0.7, 1.2, 1};
 toneWeights = {1.7, 1.5, 1.6, 1, 1.6, 1.5, 1};
+(*tones={0,1,4,5,7,8,11}+0;
+weights={1,5,5,3,3,0.7,0.7,1.2,1};
+toneWeights={1.7,1.5,1.6,1,1.6,1.5,1};*)
+(*tones={0,2,3,6,7,8,11}+0;
+weights={1,5,5,3,3,0.7,0.7,1.2,1};
+toneWeights={1.7,1.5,1.6,1,1.6,1.5,1};*)
 (*length patterns pLens*)
-params = {20, 10, {10}};
+
+params = {20, 10, {2}};
 
 (*Spousteni*)
 
