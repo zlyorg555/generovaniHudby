@@ -19,11 +19,12 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
       CDF[NormalDistribution[0, 3]][
          Abs[tone]/Length[toneWeights]]*2 - 1), (Goto[genNewTone])];
   (*introduce interval*)
-  If[RandomReal[] < 
-    toneImportance - 
-     2, (tone = {tone, 
-      tone + RandomSample[{2, 1, 1.2} -> {3, 4, 5}][[1]]*
-        Sign[tone - previous]})];
+  If[RandomReal[] < (toneImportance - 0.5)^0.4, (tone = {tone, 
+      tone + Mod[
+        RandomSample[{2.6, 1, 
+              3}*(toneWeights[[Mod[tone + {3, 4, 5}, 
+                   Length[toneWeights]] + 1]]^3) -> {3, 4, 5}][[1]]*
+         Sign[tone - previous], Length[toneWeights]] - 12})];
   Return[tone];)
 (*Vytvareni dilku hudby*)
 
@@ -124,13 +125,13 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
     patternFlag = {};
     For[j = 1, j <= Length[patternacces], j++, 
      patternFlag = 
-       AppendTo[patternFlag, 
-        0.01 + Length[Intersection[findFlags, flags[[j]]]]];(*Print[
+      AppendTo[patternFlag, 
+       0.01 + Length[Intersection[findFlags, flags[[j]]]]];(*Print[
      flags[[j]]];*)];
     pPos = 
      RandomSample[
-       patternFlag*patternacces[[pPos]] -> Range[1, params[[2]]]][[
-      1]];)];
+       patternFlag*patternacces[[pPos]] -> 
+        Range[1, params[[2]]]][[1]];)];
   Return[music];)
 
 GenSound[music_] := (soundNoteList[list_] := Apply[SoundNote, list];
