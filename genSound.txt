@@ -13,22 +13,25 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
   totalWeights = (allToneWeights*allIntervalWeights)^toneImportance;
   Label[genNewTone];
   tone = Part[RandomSample[totalWeights -> allTones, 1], 1];
-  If[RandomReal[] < 
+  If[RandomReal[] > 
     CDF[NormalDistribution[0, 0.1]][
-     Abs[tone - previous] - jumpBar], (Goto[genNewTone])];
+     jumpBar - Abs[tone - previous]], (Goto[genNewTone])];
+  If[(Abs[tone] > Abs[previous]) && (RandomReal[] < 
+      CDF[NormalDistribution[0, 3]][
+         Abs[tone]/Length[toneWeights]]*2 - 1), (
+    Goto[genNewTone])];
   Return[tone];)
 (*Vytvareni dilku hudby*)
 
-GetMelody[rythm_, weights_, toneWeights_] := (melody = {0};
-  jumpBar = 6;
+GetMelody[rythm_, weights_, 
+  toneWeights_] := (melody = {RandomSample[{0, 3, 5}][[1]]};
+  jumpBar = 4;
   For[i = 1, i < Length[rythm], i++, (previous = melody[[i]];
     next = 
      ChooseTone[previous, weights, toneWeights, rythm[[i]] + 1, 
       jumpBar];
-    jumpBar = Max[jumpBar, 100] - Abs[next - previous] + 0;
     AppendTo[melody, next];)];
   Return[melody];)
-
 
 GetTact[divCoef_, 
   recursionCoef_] := (If[
@@ -42,18 +45,19 @@ GetTact[divCoef_,
 GetRythm[divCoef_, baseRecursionCoef_, size_] := (
   Return[ApplyAndJoin[
      Function[i, 
-      GetTact[If[size == i - 1, 1.7, 
+      GetTact[If[size == i + 1, 1.7, 
         If[size == i, 1.3, divCoef - Abs[i - size /2] / 10]], 
        If[i == size, 3.7, baseRecursionCoef + Abs[i - size / 2] /3]]],
       size]];
   )
+
 (*GetPatterns[weights_,toneWeights_,size_,count_]:=(rythm=GetRythm[2.\
 3,2,size];
 Return[Map[Function[i,Transpose[{rythm,GetMelody[rythm,weights,\
 toneWeights]}]],rythm]];)*)
 
-GetPatterns[weights_, toneWeights_, size_, count_] := (
-  rythm = GetRythm[2.3, 2, size];
+GetPatterns[weights_, toneWeights_, size_, 
+  count_] := (rythm = GetRythm[2.1, 2, size];
   Return[Map[
     Function[i, 
      Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}]], 
@@ -102,7 +106,7 @@ tones = {0, 2, 3, 5, 7, 8, 10} + 0;
 weights = {1, 5, 5, 3, 3, 0.7, 0.7, 1.2, 1};
 toneWeights = {1.7, 1.5, 1.6, 1, 1.6, 1.5, 1};
 (*length patterns pLens*)
-params = {3, 2, {4}};
+params = {20, 10, {10}};
 
 (*Spousteni*)
 
