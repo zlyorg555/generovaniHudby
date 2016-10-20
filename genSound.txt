@@ -21,9 +21,8 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
   (*introduce interval*)
   If[RandomReal[] < 
     toneImportance - 
-     1, (tone = {tone, 
-      tone + 
-       RandomSample[{2, 1, 1.2} -> {3, 4, 5}][[1]]*
+     2, (tone = {tone, 
+      tone + RandomSample[{2, 1, 1.2} -> {3, 4, 5}][[1]]*
         Sign[tone - previous]})];
   Return[tone];)
 (*Vytvareni dilku hudby*)
@@ -64,8 +63,7 @@ GetPatterns[weights_, toneWeights_, size_,
      Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}]], 
     Range[count]]];)
 
-GetFlags[pattern_] := (
-  flags = {};
+GetFlags[pattern_] := (flags = {};
   If[pattern[[Length[pattern], 2]] > pattern[[1, 2]] + 5, 
    flags = Join[flags, {"ascending"}];];
   If[pattern[[Length[pattern], 2]] < pattern[[1, 2]] - 5, 
@@ -77,45 +75,41 @@ GetFlags[pattern_] := (
   If[average < -8, flags = Join[flags, {"low"}];];
   fastest = 1;
   slowest = 0;
-  For[m = 0, m < Length[pattern], m++, (
-    If[pattern[[m + 1, 1]] > slowest, 
-     slowest = pattern[[m + 1, 1]] ];
+  For[m = 0, m < Length[pattern], 
+   m++, (If[pattern[[m + 1, 1]] > slowest, 
+     slowest = pattern[[m + 1, 1]]];
     If[pattern[[m + 1, 1]] < fastest, 
-     fastest = pattern[[m + 1, 1]] ];
-    )];
+     fastest = pattern[[m + 1, 1]]];)];
   If[slowest < 1/4, flags = Join[flags, {"fast"}];];
   If[fastest >= 1/4, flags = Join[flags, {"slow"}];];
-  For[m = 1, m < Length[pattern], m++, (
-    If[pattern[[m, 1]] < pattern[[m + 1, 1]], Break[];];
-    If[m == Length[pattern] - 1, flags = Join[flags, {"slowing"}];];
-    )];
-  For[m = 1, m < Length[pattern], m++, (
-    If[pattern[[m, 1]] > pattern[[m + 1, 1]], Break[];];
-    If[m == Length[pattern] - 1, flags = Join[flags, {"speeding"}];];
-    )];
-  Return[flags];
-  )
+  If[fastest >= 1/16 && slowest <= 1/4, 
+   flags = Join[flags, {"nSpeed"}];];
+  For[m = 1, m < Length[pattern], 
+   m++, (If[pattern[[m, 1]] < pattern[[m + 1, 1]], Break[];];
+    If[m == Length[pattern] - 1, flags = Join[flags, {"slowing"}];];)];
+  For[m = 1, m < Length[pattern], 
+   m++, (If[pattern[[m, 1]] > pattern[[m + 1, 1]], Break[];];
+    If[m == Length[pattern] - 1, 
+     flags = Join[flags, {"speeding"}];];)];
+  Return[flags];)
 (*Generace Hudby*)
 
 CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
   patterns = {};
   patternacces = ConstantArray[1, {params[[2]], params[[2]]}];
   flags = {};
-  While[Length[patterns] < params[[2]], (
-    pattern = 
+  While[Length[patterns] < 
+    params[[2]], (pattern = 
      GetPatterns[weights, toneWeights, 
       RandomSample[params[[3]], 1][[1]], RandomInteger[{4, 12}]];
     oldLen = Length[patterns];
     While[Length[patterns] + Length[pattern] > params[[2]], 
      pattern = Drop[pattern, -1]];
     patterns = Join[patterns, pattern];
-    For[i = oldLen + 1, i <= Length[patterns], i++, (
-      For[j = oldLen + 1, j <= Length[patterns], j++, (
-        patternacces[[i, j]] = 10;
-        )];
-      flags = Append[flags, GetFlags[patterns[[i]]]];
-      )];
-    )];
+    For[i = oldLen + 1, i <= Length[patterns], 
+     i++, (For[j = oldLen + 1, j <= Length[patterns], 
+       j++, (patternacces[[i, j]] = 10;)];
+      flags = Append[flags, GetFlags[patterns[[i]]]];)];)];
   pPos = 1;
   For[i = 0, i < params[[1]], 
    i++, (For[j = 0, j < Length[patterns[[pPos]]], 
@@ -125,21 +119,19 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
          1 + Mod[toneOffset, Length[tones]]] + (Floor[
            toneOffset/Length[tones]]*12);
       sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Piano"};
-      AppendTo[music, sound];
-      )];
+      AppendTo[music, sound];)];
     findFlags = {};
     patternFlag = {};
     For[j = 1, j <= Length[patternacces], j++, 
      patternFlag = 
-      AppendTo[patternFlag, 
-       0.01 + Length[Intersection[findFlags, flags[[j]] ]]];(*Print[
+       AppendTo[patternFlag, 
+        0.01 + Length[Intersection[findFlags, flags[[j]]]]];(*Print[
      flags[[j]]];*)];
     pPos = 
      RandomSample[
-       patternFlag*patternacces[[pPos]] -> Range[1, params[[2]]]][[1]];
-    )];
-  Return[music];
-  )
+       patternFlag*patternacces[[pPos]] -> Range[1, params[[2]]]][[
+      1]];)];
+  Return[music];)
 
 GenSound[music_] := (soundNoteList[list_] := Apply[SoundNote, list];
   generated = Map[soundNoteList, music];
@@ -155,10 +147,10 @@ weights={1,5,5,3,3,0.7,0.7,1.2,1};
 toneWeights={1.7,1.5,1.6,1,1.6,1.5,1};*)
 (*tones={0,2,3,6,7,8,11}+0;
 weights={1,5,5,3,3,0.7,0.7,1.2,1};
-toneWeights={1.7,1.5,1.6,1,1.6,1.5,1}; *)
+toneWeights={1.7,1.5,1.6,1,1.6,1.5,1};*)
 (*length patterns pLens*)
 
-params = {20, 10, {4}};
+params = {20, 50, {4}};
 
 (*Spousteni*)
 
@@ -171,6 +163,6 @@ rtm1],ReplacePart[mainM,Length[rtm2]\[Rule]0]];
 mainM=CmpM[rtm1];
 melody2=Join[CmpM[rtm2],ReplacePart[mainM,Length[rtm1]\[Rule]4],CmpM[\
 rtm2],ReplacePart[mainM,Length[rtm1]\[Rule]0]];
-GenSound[CreateMusic[Join[melody1,melody2,melody1+3,melody2-4],tones, \
- ApplyAndJoin[Function[i,Join[rtm1,rtm2,rtm1,rtm2,rtm2,rtm1,rtm2,rtm1]\
-],2]]]*)
+GenSound[CreateMusic[Join[melody1,melody2,melody1+3,melody2-4],tones,\
+ApplyAndJoin[Function[i,Join[rtm1,rtm2,rtm1,rtm2,rtm2,rtm1,rtm2,rtm1]]\
+,2]]]*)
