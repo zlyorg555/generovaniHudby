@@ -36,9 +36,9 @@ GetMelody[rythm_, weights_,
     next = 
      ChooseTone[previous, weights, toneWeights, rythm[[i]] + 1, 
       jumpBar];
-    jumpBar = Min[jumpBar, 100] - Abs[next - previous] + 2.5;
     AppendTo[melody, next];)];
   Return[melody];)
+
 GetTact[divCoef_, 
   recursionCoef_] := (If[
    RandomReal[] > divCoef, (Return[{1}]), (divLen[e_] := e/2;
@@ -47,8 +47,16 @@ GetTact[divCoef_,
       Join[GetTact[divCoef/recursionCoef, recursionCoef], 
        GetTact[divCoef/recursionCoef, recursionCoef]]]];)])
 
-GetRythm[divCoef_, recursionCoef_, size_] := 
- ApplyAndJoin[Function[i, GetTact[divCoef, recursionCoef]], size]
+
+GetRythm[divCoef_, baseRecursionCoef_, size_] := (
+  Return[ApplyAndJoin[
+     Function[i, 
+      GetTact[If[size == i + 1, 1.7, 
+        If[size == i, 1.3, divCoef - Abs[i - size /2] / 10]], 
+       If[i == size, 3.7, baseRecursionCoef + Abs[i - size / 2] /3]]],
+      size]];
+  )
+
 (*GetPatterns[weights_,toneWeights_,size_,count_]:=(rythm=GetRythm[2.\
 3,2,size];
 Return[Map[Function[i,Transpose[{rythm,GetMelody[rythm,weights,\
