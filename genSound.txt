@@ -1,3 +1,4 @@
+(*Obecne funkce*)
 ApplyAndJoin[fn_, count_] := (Flatten[Map[fn, Range[count]]])
 (*Vyber naslednosti tonu*)
 
@@ -22,57 +23,57 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
   If[RandomReal[] < 
     toneImportance - 
      2, (tone = {tone, 
-      tone + RandomSample[{2, 1, 1.2} -> {3, 4, 5}][[1]]*
+      tone + 
+       RandomSample[{2, 1, 1.2} -> {3, 4, 5}][[1]]*
         Sign[tone - previous]})];
   Return[tone];)
 (*Vytvareni dilku hudby*)
 
-GetMelody[rythm_, weights_, 
-  toneWeights_] := (melody = {RandomSample[{0, 3, 5}][[1]]};
+GetMelody[rythm_, weights_, toneWeights_, flag_] := (
+  melody = {RandomSample[{0, 3, 5}][[1]]};
   jumpBar = 2;
-  For[i = 1, i < Length[rythm], 
-   i++, (previous = Flatten[{melody[[i]]}][[1]];
+  For[u = 1, u < Length[rythm], u++, (
+    previous = Flatten[{melody[[u]]}][[1]];
     next = 
-     ChooseTone[previous, weights, toneWeights, rythm[[i]] + 1, 
+     ChooseTone[previous, weights, toneWeights, rythm[[u]] + 1, 
       jumpBar];
     AppendTo[melody, next];)];
+  If[flag == "low", (For[u = 1, u <= Length[rythm], u++, (
+       melody[[u]] -= 8;
+       )];)];
+  If[flag == "high", (For[u = 1, u <= Length[rythm], u++, (
+       melody[[u]] += 8;
+       )];)];
   Return[melody];)
 
-GetTact[divCoef_, 
-  recursionCoef_] := (If[
-   RandomReal[] > divCoef, (Return[{1}]), (divLen[e_] := e/2;
-    Return[
-     Map[divLen, 
-      Join[GetTact[divCoef/recursionCoef, recursionCoef], 
-       GetTact[divCoef/recursionCoef, recursionCoef]]]];)])
+GetTact[divCoef_, recursionCoef_] := (
+  If[RandomReal[] > divCoef, (Return[{1}]), (
+     divLen[e_] := e/2;
+     Return[
+      Map[divLen, 
+       Join[GetTact[divCoef/recursionCoef, recursionCoef], 
+        GetTact[divCoef/recursionCoef, recursionCoef]]]];
+     )];
+  )
 
 
 GetRythm[divCoef_, baseRecursionCoef_, 
   size_] := (Return[
-    ApplyAndJoin[
-     Function[i, 
-      GetTact[If[size == i + 1, 1.7, 
-        If[size == i, 1.3, divCoef - Abs[i - size/2]/10]], 
-       If[i == size, 3.7, baseRecursionCoef + Abs[i - size/2]/3]]], 
+    ApplyAndJoin[Function[i, GetTact[divCoef, baseRecursionCoef]], 
      size]];)
 
-GetPatterns[weights_, toneWeights_, size_, 
-  count_] := (rythm = GetRythm[2.1, 2.3, size];
-  Return[Map[
-    Function[i, 
-     Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}]], 
-    Range[count]]];)
-
-GetFlags[pattern_] := (flags = {};
+GetFlags[pattern_] := (
+  flgs = {};
   If[pattern[[Length[pattern], 2]] > pattern[[1, 2]] + 5, 
-   flags = Join[flags, {"ascending"}];];
+   flgs = Join[flgs, {"ascending"}];];
   If[pattern[[Length[pattern], 2]] < pattern[[1, 2]] - 5, 
-   flags = Join[flags, {"descending"}];];
+   flgs = Join[flgs, {"descending"}];];
   average = 0;
   For[m = 0, m < Length[pattern], m++, 
    average += pattern[[m + 1, 2]]/Length[pattern];];
-  If[average > 8, flags = Join[flags, {"high"}];];
-  If[average < -8, flags = Join[flags, {"low"}];];
+  If[average > 8, flgs = Join[flgs, {"high"}];];
+  If[average < -8, flgs = Join[flgs, {"low"}];];
+  If[average >= -8 && average <= 8, flgs = Join[flgs, {"nHight"}];];
   fastest = 1;
   slowest = 0;
   For[m = 0, m < Length[pattern], 
@@ -80,57 +81,151 @@ GetFlags[pattern_] := (flags = {};
      slowest = pattern[[m + 1, 1]]];
     If[pattern[[m + 1, 1]] < fastest, 
      fastest = pattern[[m + 1, 1]]];)];
-  If[slowest < 1/4, flags = Join[flags, {"fast"}];];
-  If[fastest >= 1/4, flags = Join[flags, {"slow"}];];
+  If[slowest < 1/4, flgs = Join[flgs, {"fast"}];];
+  If[fastest >= 1/4, flgs = Join[flgs, {"slow"}];];
   If[fastest >= 1/16 && slowest <= 1/4, 
-   flags = Join[flags, {"nSpeed"}];];
+   flgs = Join[flgs, {"nSpeed"}];];
   For[m = 1, m < Length[pattern], 
-   m++, (If[pattern[[m, 1]] < pattern[[m + 1, 1]], Break[];];
-    If[m == Length[pattern] - 1, flags = Join[flags, {"slowing"}];];)];
-  For[m = 1, m < Length[pattern], 
-   m++, (If[pattern[[m, 1]] > pattern[[m + 1, 1]], Break[];];
-    If[m == Length[pattern] - 1, 
-     flags = Join[flags, {"speeding"}];];)];
-  Return[flags];)
+    m++, (If[pattern[[m, 1]] < pattern[[m + 1, 1]], Break[];];
+     If[m == Length[pattern] - 1 && pattern[[m + 1, 1]] >= 1/4, 
+      flgs = Join[flgs, {"slowing"}];];)]
+   For[m = 1, m < Length[pattern], 
+    m++, (If[pattern[[m, 1]] > pattern[[m + 1, 1]], Break[];];
+     If[m == Length[pattern] - 1, flgs = Join[flgs, {"speeding"}];];)];
+  Return[flgs];)
+
+GetPatterns[weights_, toneWeights_, size_, count_, dflags_] := (
+  rythm = GetRythm[2.1, 2.3, size];
+  patt = Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}];
+  patts = {};
+  flag = GetFlags[patt];
+  While[Length[
+     Intersection[
+      flag, {"slowing", "speeding", "nSpeed", "slow", "fast"}, 
+      dflags]] != 
+    Length[Intersection[{"slowing", "speeding", "nSpeed", "slow", 
+       "fast"}, dflags]], (
+    rythm = GetRythm[2.1, 2.3, size];
+    If[1 == Length[Intersection[{"slow"}, dflags]], (
+      rythm = GetRythm[1.5, 2.3, size];)];
+    If[1 == Length[Intersection[{"fast"}, dflags]], (
+      rythm = GetRythm[4.1, 2.3, size];
+      )];
+    If[1 == Length[Intersection[{"nSpeed"}, dflags]], (
+      rythm = GetRythm[9, 3, size];)];
+    patt = 
+     Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}];
+    flag = GetFlags[patt];
+    (*Print[flag];*)
+    )];
+  For[p = 0, p < size, p++, (
+    patt = 
+     Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}];
+    flag = GetFlags[patt];
+    While[Length[Intersection[flag, dflags]] != Length[dflags], (
+      patt = 
+       Transpose[{rythm, 
+         GetMelody[rythm, weights, toneWeights, ""]}];
+      If[1 == Length[Intersection[{"low"}, dflags]], (
+        patt = 
+          Transpose[{rythm, 
+            GetMelody[rythm, weights, toneWeights, "low"]}];
+        )];
+      If[1 == Length[Intersection[{"high"}, dflags]], 
+       patt = Transpose[{rythm, 
+           GetMelody[rythm, weights, toneWeights, "high"]}];];
+      flag = GetFlags[patt];
+      )];
+    patts = AppendTo[patts, patt];
+    )];
+  Return[Map[
+    Function[i, 
+     Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}]], 
+    Range[count]]];
+  )
+
 (*Generace Hudby*)
 
 CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
   patterns = {};
   patternacces = ConstantArray[1, {params[[2]], params[[2]]}];
   flags = {};
-  While[Length[patterns] < 
-    params[[2]], (pattern = 
-     GetPatterns[weights, toneWeights, 
-      RandomSample[params[[3]], 1][[1]], RandomInteger[{4, 12}]];
+  dflags = {{"nSpeed", "descending"}, {"low", "slow"}, {"low", 
+     "slow"}, {"nSpeed"}, {"slow"}, {"fast"}, {"low"}};
+  For[n = 1, Length[patterns] < params[[2]], n++, (
+    If[n <= 3, 
+     pattern = 
+       GetPatterns[weights, toneWeights, 
+        RandomSample[params[[3]], 1][[1]], 1, dflags[[n]]];];
+    If[n <= 7 && n > 3, 
+     pattern = 
+       GetPatterns[weights, toneWeights, 
+        RandomSample[params[[3]], 1][[1]], RandomInteger[{4, 12}], 
+        dflags[[n]]];];
+    If[n > 7, 
+     pattern = 
+       GetPatterns[weights, toneWeights, 
+        RandomSample[params[[3]], 1][[1]], 
+        RandomInteger[{4, 12}], {}];];
     oldLen = Length[patterns];
     While[Length[patterns] + Length[pattern] > params[[2]], 
      pattern = Drop[pattern, -1]];
     patterns = Join[patterns, pattern];
     For[i = oldLen + 1, i <= Length[patterns], 
      i++, (For[j = oldLen + 1, j <= Length[patterns], 
-       j++, (patternacces[[i, j]] = 10;)];
-      flags = Append[flags, GetFlags[patterns[[i]]]];)];)];
+        j++, (patternacces[[i, j]] = 10;)];
+      )];)];
   pPos = 1;
-  For[i = 0, i < params[[1]], 
-   i++, (For[j = 0, j < Length[patterns[[pPos]]], 
-     j++, (toneOffset = patterns[[pPos, j + 1, 2]];
-      tone = 
-       Part[tones, 
-         1 + Mod[toneOffset, Length[tones]]] + (Floor[
-           toneOffset/Length[tones]]*12);
-      sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Piano"};
-      AppendTo[music, sound];)];
+  level = 0;
+  For[la = 1, la <= Length[patterns], la++, (
+    flags = AppendTo[flags, GetFlags[patterns[[la]]]];
+    )];
+  For[i = 0, i < params[[1]], i++, (
+    If[i > 0, 
+     For[j = 0, j < Length[patterns[[pPos]]], 
+       j++, (toneOffset = patterns[[pPos, j + 1, 2]];
+        tone = 
+         Part[tones, 
+           1 + Mod[toneOffset, Length[tones]]] + (Floor[
+             toneOffset/Length[tones]]*12);
+        sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Violin"};
+        AppendTo[music, sound];)];];
+    If[i >= params[[1]]/5 && RandomReal[] > 0.8 && level <= 0, 
+     level = 1];
+    If[i >= params[[1]]/3 && RandomReal[] > 0.8 && level <= 1, 
+     level = 2];
+    If[i == params[[1]] - 3, level = 3];
+    If[i == params[[1]] - 2, level = 4];
+    
     findFlags = {};
     patternFlag = {};
+    If[level == 0, findFlags = Append[findFlags, "slow"]];
+    If[level == 1, findFlags = Append[findFlags, "nSpeed"]];
+    If[level <= 1, findFlags = Append[findFlags, "nHight"]];
+    If[level == 3, findFlags = Append[findFlags, "nSpeed"]];
+    If[level == 3, findFlags = Append[findFlags, "descending"]];
+    If[level == 4, findFlags = Append[findFlags, "low"]];
+    If[level == 4, findFlags = Append[findFlags, "slow"]];
+    
     For[j = 1, j <= Length[patternacces], j++, 
      patternFlag = 
-       AppendTo[patternFlag, 
-        0.01 + Length[Intersection[findFlags, flags[[j]]]]];(*Print[
+      AppendTo[patternFlag, 
+       0.01 + Length[Intersection[findFlags, flags[[j]]]]^10];(*Print[
      flags[[j]]];*)];
     pPos = 
      RandomSample[
-       patternFlag*patternacces[[pPos]] -> Range[1, params[[2]]]][[
-      1]];)];
+       patternFlag*patternacces[[pPos]] -> 
+        Range[1, params[[2]]]][[1]];)];
+  (*Print[flags];*)
+  
+  For[j = 0, j < Length[patterns[[pPos]]], 
+   j++, (toneOffset = patterns[[pPos, j + 1, 2]];
+    tone = 
+     Part[tones, 
+       1 + Mod[toneOffset, Length[tones]]] + (Floor[
+         toneOffset/Length[tones]]*12);
+    sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Violin"};
+    AppendTo[music, sound];)];
   Return[music];)
 
 GenSound[music_] := (soundNoteList[list_] := Apply[SoundNote, list];
@@ -150,7 +245,7 @@ weights={1,5,5,3,3,0.7,0.7,1.2,1};
 toneWeights={1.7,1.5,1.6,1,1.6,1.5,1};*)
 (*length patterns pLens*)
 
-params = {20, 50, {4}};
+params = {50, 50, {4}};
 
 (*Spousteni*)
 
