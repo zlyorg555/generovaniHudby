@@ -19,7 +19,7 @@ ChooseTone[previous_, weights_, toneWeights_, toneImportance_,
       CDF[NormalDistribution[0, 3]][
          Abs[tone]/Length[toneWeights]]*2 - 1), (Goto[genNewTone])];
   (*introduce interval*)
-  If[RandomReal[] < (toneImportance - 0.5)^0.4, (tone = {tone, 
+  If[RandomReal[] < (toneImportance - 2.5)^1, (tone = {tone, 
       tone + Mod[
         RandomSample[{2.6, 1, 
               3}*(toneWeights[[Mod[tone + {3, 4, 5}, 
@@ -93,8 +93,42 @@ GetFlags[pattern_] := (flags = {};
     If[m == Length[pattern] - 1, 
      flags = Join[flags, {"speeding"}];];)];
   Return[flags];)
+
+RateChord[tone_, chord_, intervalWeights_] := 
+  Total[Map[
+    Function[tt, 
+     intervalWeights[[Mod[Abs[tone - tt], Length[intervalWeights]] + 
+        1]]], chord]];
+DetectHarmony[melody_, toneWeights_, intervalWeights_] := (
+  chords = 
+   Map[Function[i, {0, 2, 4} + i], Range[0, Length[toneWeights]]];
+  weightedChords = 
+   Map[Function[t, 
+     Map[Function[ch, RateChord[t[[1]], ch, intervalWeights]], 
+      chords]], melody];
+  currentLen = 0;
+  tactW = Map[Function[i, 0], chords];
+  result = {};
+  For[i = 1, i <= Length[melody], i++, (
+    tactW = tactW + weightedChords[[i]]*melody[[i]][[2]];
+    currentLen = currentLen + melody[[i]][[2]];
+    If[currentLen > 1, (
+      AppendTo[result, 
+       Flatten[MaximalBy[MapIndexed[Function[{e, i}, {e, i}], tactW], 
+           Function[i, i[[1]]]][[1]]][[2]]];
+      currentLen = 0;
+      tactW = tactW*0;
+      )]
+    )];
+  Return[Map[Function[i, chords[[i]]], result]];
+  )
+
 (*Generace Hudby*)
 
+MapTone[tones_, toneOffset_] := 
+ Part[tones, 
+   1 + Mod[toneOffset, Length[tones]]] + (Floor[
+     toneOffset/Length[tones]]*12)
 CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
   patterns = {};
   patternacces = ConstantArray[1, {params[[2]], params[[2]]}];
@@ -115,10 +149,7 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
   For[i = 0, i < params[[1]], 
    i++, (For[j = 0, j < Length[patterns[[pPos]]], 
      j++, (toneOffset = patterns[[pPos, j + 1, 2]];
-      tone = 
-       Part[tones, 
-         1 + Mod[toneOffset, Length[tones]]] + (Floor[
-           toneOffset/Length[tones]]*12);
+      tone = MapTone[tones, toneOffset];
       sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Piano"};
       AppendTo[music, sound];)];
     findFlags = {};
@@ -134,7 +165,20 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
         Range[1, params[[2]]]][[1]];)];
   Return[music];)
 
-GenSound[music_] := (soundNoteList[list_] := Apply[SoundNote, list];
+JoinVoices[voices_] := (
+  Return[Flatten[Map[Function[voice, (
+        time = 0;
+        Map[Function[note,
+          {note[[1]], {time, time += note[[2]]}, note[[3]], 
+           If[Length[note] > 3, note[[4]], 1]}
+          ], voice]
+        )
+       ], voices], 1]];
+  )
+
+GenSound[music_] := (soundNoteList[list_] := 
+   SoundNote[list[[1]], list[[2]], list[[3]], 
+    SoundVolume -> list[[4]]];
   generated = Map[soundNoteList, music];
   sound = Sound[generated];
   Return[sound];)
@@ -155,7 +199,16 @@ params = {20, 50, {4}};
 
 (*Spousteni*)
 
-GenSound[CreateMusic[tones, weights, toneWeights, params]]
+music = CreateMusic[tones, weights, toneWeights, params];
+(*Print[music];*)
+GenSound[JoinVoices[{music}]];
+harmony = DetectHarmony[music, toneWeights, {5, 1, 3, 2, 4, 1, 1}];
+Print[harmony];
+GenSound[JoinVoices[{music, 
+   Map[Function[
+     chord, {Map[Function[t, MapTone[tones, t]], chord - 8], 1.5, 
+      "Piano", 0.7}], harmony]}]]
+
 
 (*CmpM[rtm_]:=GetMelody[rtm,weights,toneWeights];
 mainM=CmpM[rtm2];
