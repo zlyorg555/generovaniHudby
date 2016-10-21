@@ -94,7 +94,8 @@ GetFlags[pattern_] := (flgs = {};
 
 GetPatterns[weights_, toneWeights_, size_, count_, 
   dflags_] := (rythm = GetRythm[2.1, 2.3, size];
-  patt = Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}];
+  patt = Transpose[{rythm, 
+     GetMelody[rythm, weights, toneWeights, ""]}];
   patts = {};
   flag = GetFlags[patt];
   While[Length[
@@ -108,17 +109,17 @@ GetPatterns[weights_, toneWeights_, size_, count_,
         GetRythm[1.5, 2.3, size];)];
     If[1 == 
       Length[Intersection[{"fast"}, dflags]], (rythm = 
-        GetRythm[4.1, 2.3, size];)];
+        GetRythm[3.1, 2.3, size];)];
     If[1 == 
       Length[Intersection[{"nSpeed"}, dflags]], (rythm = 
         GetRythm[9, 3, size];)];
     patt = 
-     Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}];
+     Transpose[{rythm, GetMelody[rythm, weights, toneWeights, ""]}];
     flag = GetFlags[patt];
     (*Print[flag];*))];
   For[p = 0, p < size, 
    p++, (patt = 
-     Transpose[{rythm, GetMelody[rythm, weights, toneWeights]}];
+     Transpose[{rythm, GetMelody[rythm, weights, toneWeights, {}]}];
     flag = GetFlags[patt];
     While[
      Length[Intersection[flag, dflags]] != 
@@ -141,9 +142,11 @@ RateChord[tone_, chord_, intervalWeights_] :=
     Function[tt, 
      intervalWeights[[
       Mod[Abs[tone - tt], Length[intervalWeights]] + 1]]], chord]];
+
 DetectHarmony[melody_, toneWeights_, 
   intervalWeights_] := (chords =(*{{0,2,4},{3,5,7},{4,6,8}}*)
-   Map[Function[i, {0, 2, 4} + i], Range[0, Length[toneWeights]]];
+   Map[Function[i, {0, 2, 4} + i], 
+    Range[0, Length[toneWeights] - 2]];
   weightedChords = 
    Map[Function[t, 
      Map[Function[ch, RateChord[t[[1]], ch, intervalWeights]], 
@@ -182,7 +185,7 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
     If[n <= 7 && n > 3, 
      pattern = 
        GetPatterns[weights, toneWeights, 
-        RandomSample[params[[3]], 1][[1]], RandomInteger[{4, 12}], 
+        RandomSample[params[[3]], 1][[1]], RandomInteger[{2, 10}], 
         dflags[[n]]];];
     If[n > 7, 
      pattern = 
@@ -206,7 +209,8 @@ CreateMusic[tones_, weights_, toneWeights_, params_] := (music = {};
        j++, (toneOffset = patterns[[pPos, j + 1, 2]];
         tone = MapTone[tones, toneOffset];
         sound = {tone, patterns[[pPos, j + 1, 1]]*1.5, "Piano"};
-        AppendTo[music, sound];)];];
+        AppendTo[music, sound];
+        )];];
     If[i >= params[[1]]/5 && RandomReal[] > 0.8 && level <= 0, 
      level = 1];
     If[i >= params[[1]]/3 && RandomReal[] > 0.8 && level <= 1, 
@@ -255,6 +259,23 @@ JoinVoices[voices_] := (
            If[Length[note] > 3, note[[4]], 1]}], voice])], voices], 
      1]];)
 
+MoreInstruments[music_] := (
+  betterMusic = {};
+  timeMusic = 1;
+  For[i = 1, i <= Length[music], i++, (
+    x = {timeMusic, timeMusic + music[[i, 2]]};
+    betterMusic = 
+     AppendTo[betterMusic, {music[[i, 1]], x, "Violin", 1}];
+    betterMusic = 
+     AppendTo[betterMusic, {music[[i, 1]], x, "Trombone", 1}];
+    betterMusic = 
+     AppendTo[betterMusic, {music[[i, 1]], x, "Flute", 1}];
+    timeMusic += music[[i, 2]];
+    )];
+  Print[timeMusic];
+  Return[betterMusic];
+  )
+
 GenSound[music_] := (soundNoteList[list_] := 
    SoundNote[list[[1]], list[[2]], list[[3]], 
     SoundVolume -> list[[4]]];
@@ -280,20 +301,40 @@ params = {20, 50, {4}};
 
 music = CreateMusic[tones, weights, toneWeights, params];
 (*Print[music];*)
-GenSound[JoinVoices[{music}]]
+
 harmony = DetectHarmony[music, toneWeights, {5, 1, 3, 2, 4, 1, 1}];
 Print[harmony];
 leftHand = 
   Map[Function[
     chord, {Map[Function[t, MapTone[tones, t]], chord - 8], 1.5, 
-     "Goblins", 0.7}], harmony];
+     "Piano", 1}], harmony];
 leftHand[[Length[leftHand]]][[2]] = 4.5;
-GenSound[JoinVoices[{music, leftHand}]]
+leftHand2 = 
+  Map[Function[
+    chord, {Map[Function[t, MapTone[tones, t]], chord - 16], 1.5, 
+     "Contrabass", 0.8}], harmony];
+leftHand2[[Length[leftHand2]]][[2]] = 4.5;
+leftHand3 = 
+  Map[Function[
+    chord, {Map[Function[t, MapTone[tones, t]], chord - 8], 1.5, 
+     "Organ", 0.4}], harmony];
+leftHand3[[Length[leftHand3]]][[2]] = 4.5;
+leftHand3 = 
+  Map[Function[
+    chord, {Map[Function[t, MapTone[tones, t]], chord - 8], 1.5, 
+     "Tuba", 0.8}], harmony];
+leftHand3[[Length[leftHand3]]][[2]] = 4.5;
+mainMusic = MoreInstruments[music];
+GenSound[mainMusic]
+GenSound[music]
+GenSound[Join[JoinVoices[{(*leftHand,*)leftHand2, leftHand3}], 
+  mainMusic]]
+GenSound[JoinVoices[{leftHand, music}]]
 Export["magicHappened.mid", 
  GenSound[JoinVoices[{music, 
     Map[Function[
       chord, {Map[Function[t, MapTone[tones, t]], chord - 8], 1.5, 
-       "Goblins", 0.7}], harmony]}]]]
+       "Piano", 0.7}], harmony]}]]]
 (*GenSound[JoinVoices[{Map[Function[chord,{Map[Function[t,MapTone[\
 tones,t]],chord-8],0.5,"Piano",1}],chords]}]]
 
@@ -308,4 +349,3 @@ rtm2],ReplacePart[mainM,Length[rtm1]\[Rule]0]];
 GenSound[CreateMusic[Join[melody1,melody2,melody1+3,melody2-4],tones,\
 ApplyAndJoin[Function[i,Join[rtm1,rtm2,rtm1,rtm2,rtm2,rtm1,rtm2,rtm1]]\
 ,2]]]*)
-
